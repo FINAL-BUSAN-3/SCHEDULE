@@ -4,8 +4,10 @@ pipeline {
 	stages {
 		stage('[Schedule Sync] Start') {
 			steps {
+				script{
 				 sh '[Schedule Sync] Start'
 				// slackSend(channel: '#deployment-alert', color: '#00FF7F' , message: "[Schedule Sync] Start : Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+				}
 			}
 		}
 		stage('[Schedule Sync] Git clone') {
@@ -27,9 +29,11 @@ pipeline {
                 }
 		stage('[Schedule Sync] Done') {
                         steps {
+				script{
 				 sh 'echo "Hello"'
                                 // slackSend(channel: '#deployment-alert', color: '#00FF7F' , message: "[Schedule Sync] Done : Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
-                        }
+                        	}
+			}
                 }
 		
 	}
