@@ -13,8 +13,7 @@ pipeline {
 				sh 'echo "Hello"'
 				sh 'hostname'
 				sh 'whoami'			
-				sh 'ls -al /home/jenkins_home/och_aws.pem'				
-//sh 'ssh -i /home/jenkins_home/och_aws.pem ubuntu@ec2-3-105-131-178.ap-southeast-2.compute.amazonaws.com ls'
+				//sh 'ls -al /home/jenkins_home/och_aws.pem'					sh 'ssh -i /opt/och_aws.pem ubuntu@ec2-3-105-131-178.ap-southeast-2.compute.amazonaws.com ls'
                                 // slackSend(channel: '#deployment-alert', color: '#00FF7F' , message: "[Schedule Sync] Git clone : Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
                         }
                 }
