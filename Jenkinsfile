@@ -10,10 +10,17 @@ pipeline {
 		}
 		stage('[Schedule Sync] Git clone') {
                         steps {
+				
+				def localUser = 'ubuntu'
+				def localHost = 'ec2-3-105-131-178.ap-southeast-2.compute.amazonaws.com'
+				def pemPath = '/opt/och_aws.pem'				
+
 				sh '[Schedule Sync] Git clone'
 				sh """
-				ssh -i /opt/och_aws.pem ubuntu@ec2-3-105-131-178.ap-southeast-2.compute.amazonaws.com "cd /home/ubuntu/airflow-compose/dags/SCHEDULE && git pull"
+				ssh -i ${pemPath} ${localUser}@${localHost} "ls"
 				"""
+//"cd /home/ubuntu/airflow-compose/dags/SCHEDULE && git pull"
+				//"""
                                 // slackSend(channel: '#deployment-alert', color: '#00FF7F' , message: "[Schedule Sync] Git clone : Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
                         }
                 }
