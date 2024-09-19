@@ -11,7 +11,8 @@ pipeline {
 		stage('[Schedule Sync] Git clone') {
                         steps {
 				sh 'echo "Hello"'
-				
+				sh 'hostname'
+				sh 'whoami'			
                                 // slackSend(channel: '#deployment-alert', color: '#00FF7F' , message: "[Schedule Sync] Git clone : Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
                         }
                 }
