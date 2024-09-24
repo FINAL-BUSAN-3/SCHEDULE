@@ -1,2 +1,2 @@
 # SCHEDULE
-airflow schedule
+airflow scheduledzsffxv
