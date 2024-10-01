@@ -33,7 +33,6 @@ with DAG(
 
         middle_wf
 
-
     start_wf >> middle_wf_group
 
     middle_wf_group >> end_wf
