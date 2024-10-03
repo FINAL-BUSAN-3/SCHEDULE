@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 from pendulum.tz.timezone import Timezone
 import subprocess
 import textwrap
-import trino
 
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
