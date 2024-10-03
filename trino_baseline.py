@@ -10,7 +10,7 @@ from airflow.utils.weight_rule import WeightRule
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.operators.ssh_operator import SSHOperator
 from airflow.operators.dummy import DummyOperator
-from dags.libs.util import TrinoOperator
+from lib.util import TrinoOperator
 from airflow.contrib.hooks.ssh_hook import SSHHook
 
 
