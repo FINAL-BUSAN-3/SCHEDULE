@@ -15,7 +15,7 @@ from airflow.contrib.hooks.ssh_hook import SSHHook
 
 
 with DAG(
-        dag_id=f'end_test_dag',
+        dag_id=f'trino_baseline',
         default_args={
             'owner': 'och',
             'weight_rule': WeightRule.ABSOLUTE,
