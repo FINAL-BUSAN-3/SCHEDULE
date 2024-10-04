@@ -1,35 +1,86 @@
-from airflow.utils.task_group import TaskGroup
-from airflow.utils.weight_rule import WeightRule
-from airflow.operators.python_operator import PythonOperator
-from airflow.contrib.operators.ssh_operator import SSHOperator
-from airflow.operators.dummy import DummyOperator
-from airflow.contrib.hooks.ssh_hook import SSHHook
+import pandas as pd
 from airflow import DAG
-from datetime import datetime
-import pendulum
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+import os
 
 
+# 데이터 추출 함수
+def extract_data():
+    print("Titanic 데이터 추출 중...")
+    try:
+        df = pd.read_csv('/actual/path/to/titanic.csv')
+        df.to_csv('/actual/path/to/extracted_data.csv', index=False)
+        print(df.head())
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+
+
+# 데이터 변환 함수 (결측치 처리 및 컬럼 제거)
+def transform_data():
+    print("Titanic 데이터 변환 중...")
+    try:
+        df = pd.read_csv('/actual/path/to/extracted_data.csv')
+
+        # 결측치 처리: 나이('Age')와 선임자('Embarked')의 결측치를 채우기
+        df['Age'].fillna(df['Age'].mean(), inplace=True)
+        df['Embarked'].fillna(df['Embarked'].mode()[0], inplace=True)
+
+        # 필요 없는 컬럼 제거: 'Cabin', 'Ticket'
+        df = df.drop(columns=['Cabin', 'Ticket'])
+
+        df.to_csv('/actual/path/to/transformed_data.csv', index=False)
+        print(df.head())
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+
+
+# 데이터 적재 함수
+def load_data():
+    print("전처리된 Titanic 데이터 적재 중...")
+    try:
+        df = pd.read_csv('/actual/path/to/transformed_data.csv')
+        df.to_csv('/actual/path/to/final_data.csv', index=False)
+        print(df.head())
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+
+
+# 기본 인자 설정
+default_args = {
+    'owner': 'shr',
+    'depends_on_past': False,
+    'start_date': datetime(2023, 10, 1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# DAG 정의
 with DAG(
-        dag_id=f'shr_dag',
-        default_args={
-            'owner': 'shr',
-            'weight_rule': WeightRule.ABSOLUTE,
-        },
-        start_date=datetime(2024, 9, 20, 19, 0, 0, tzinfo=pendulum.timezone('Asia/Seoul')),
-        end_date=None,
-        schedule_interval='55 * * * *',
+        'shr_titanic_pipeline',
+        default_args=default_args,
+        description='A Titanic data preprocessing pipeline',
+        schedule_interval='@daily',  # 매일 실행
         tags=['test'],
         catchup=False,
 ) as dag:
-    start_wf = DummyOperator(task_id='start_wf')
-    end_wf = DummyOperator(task_id='end_wf')
+    # 각 단계 정의
+    extract_task = PythonOperator(
+        task_id='extract_data',
+        python_callable=extract_data,
+    )
 
-    with TaskGroup(f"middle_wf") as middle_wf_group:
+    transform_task = PythonOperator(
+        task_id='transform_data',
+        python_callable=transform_data,
+    )
 
-        middle_wf = DummyOperator(task_id='middle_wf')
+    load_task = PythonOperator(
+        task_id='load_data',
+        python_callable=load_data,
+    )
 
-        middle_wf
-
-    start_wf >> middle_wf_group
-
-    middle_wf_group >> end_wf
+    # 작업 순서 정의
+    extract_task >> transform_task >> load_task
