@@ -1,85 +1,80 @@
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 import pandas as pd
+
+import airflow
 from airflow import DAG
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from datetime import datetime, timedelta
-import os
-import seaborn as sns
-from airflow import DAG
 
-# 데이터 추출 함수
-def extract_data():
-    print("Titanic 데이터 추출 중...")
-    try:
-        df = sns.load_dataset('titanic')
-        df.to_csv('/tmp/extracted_data.csv', index=False)
-        print(df.head())
-    except Exception as e:
-        print(f"Error: {e}")
+dag = DAG(
+    dag_id='train_titanic',
+    start_date=airflow.utils.dates.days_ago(2),
+    schedule_interval=None
+)
 
-# 데이터 변환 함수 (결측치 처리 및 컬럼 제거)
-def transform_data():
-    print("Titanic 데이터 변환 중..")
-    try:
-        df = pd.read_csv('/tmp/extracted_data.csv')
+download_dataset = BashOperator(
+    task_id='download_dataset',
+    bash_command='curl -o /tmp/titanic.csv -L https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv',
+    dag=dag
+)
 
-        # 결측치 처리: 나이('Age')와 선임자('Embarked')의 결측치를 채우기
-        df['age'].fillna(df['age'].mean(), inplace=True)
-        df['embarked'].fillna(df['embarked'].mode()[0], inplace=True)
+def _preprocessing_data():
+    df = pd.read_csv('/tmp/titanic.csv')
 
-        # 필요 없는 컬럼 제거: 'cabin', 'ticket'
-        df = df.drop(columns=['cabin', 'ticket'])
+    # 결측값 채우기
+    df['Age'].fillna(df['Age'].mean(), inplace=True)
+    df['Cabin'].fillna('N', inplace=True)
+    df['Embarked'].fillna('N', inplace=True)
 
-        df.to_csv('/tmp/transformed_data.csv', index=False)
-        print(df.head())
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
+    # 컬럼 제거
+    df.drop(['PassengerId', 'Name', 'Ticket'], axis=1, inplace=True)
 
-# 데이터 적재 함수
-def load_data():
-    print("전처리된 Titanic 데이터 적재 중...")
-    try:
-        df = pd.read_csv('/tmp/transformed_data.csv')
-        df.to_csv('/tmp/final_data.csv', index=False)
-        print(df.head())
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
+    # lable encoding
+    df['Cabin'] = df['Cabin'].str[:1]
+    features = ['Cabin', 'Sex', 'Embarked']
+    for feature in features:
+        le = LabelEncoder()
+        le = le.fit(df[feature])
+        df[feature] = le.transform(df[feature])
 
+    df.to_csv('/tmp/titanic_preprocessed.csv', index=False)
+    print('csv file saved.')
 
-# 기본 인자 설정
-default_args = {
-    'owner': 'shr',
-    'depends_on_past': False,
-    'start_date': datetime(2023, 10, 1),
-    'email_on_failure': False,
-    'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
-}
+def _train_model():
+    df = pd.read_csv('/tmp/titanic_preprocessed.csv')
 
-# DAG 정의
-with DAG(
-        'shr_titanic_pipeline',
-        default_args=default_args,
-        description='A Titanic data preprocessing pipeline',
-        schedule_interval='@daily',  # 매일 실행
-        tags=['test'],
-        catchup=False,
-) as dag:
-    # 각 단계 정의
-    extract_task = PythonOperator(
-        task_id='extract_data',
-        python_callable=extract_data,
-    )
+    # x, y split
+    y_df = df['Survived']
+    X_df = df.drop('Survived', axis=1)
 
-    transform_task = PythonOperator(
-        task_id='transform_data',
-        python_callable=transform_data,
-    )
+    # train test split
+    X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=0.2, random_state=11)
 
-    load_task = PythonOperator(
-        task_id='load_data',
-        python_callable=load_data,
-    )
+    # train
+    lr_clf = LogisticRegression()
+    lr_clf.fit(X_train, y_train)
+    lr_pred = lr_clf.predict(X_test)
+    print('LogisticRegression 정확도: {0:.4f}'.format(accuracy_score(y_test, lr_pred)))
 
-    # 작업 순서 정의
-    extract_task >> transform_task >> load_task
+preprocessing_data = PythonOperator(
+    task_id='preprocessing_data',
+    python_callable=_preprocessing_data,
+    dag=dag
+)
+
+train_model = PythonOperator(
+    task_id='train_model',
+    python_callable=_train_model,
+    dag=dag
+)
+
+notify = BashOperator(
+    task_id='notify',
+    bash_command='echo "pipeline is complete."',
+    dag=dag
+)
+
+download_dataset >> preprocessing_data >> train_model >> notify
