@@ -18,7 +18,7 @@ def extract_data():
 
 # 데이터 변환 함수 (결측치 처리 및 컬럼 제거)
 def transform_data():
-    print("Titanic 데이터 변환 중...")
+    print("Titanic 데이터 변환 중..")
     try:
         df = pd.read_csv('/tmp/extracted_data.csv')
 
