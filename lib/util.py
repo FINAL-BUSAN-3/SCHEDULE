@@ -6,7 +6,7 @@ class TrinoOperator(BaseOperator):
     def __init__(self, query: str, **kwargs) -> None:
         super().__init__(**kwargs)
         self.host = "opyter.iptime.org"
-        self.port = 20001
+        self.port = 40000
         self.user = "airflow"
         self.catalog = "dl_iceberg"
         self.schema = "stg"
