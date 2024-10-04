@@ -3,44 +3,43 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import os
-
+import seaborn as sns
+from airflow import DAG
 
 # 데이터 추출 함수
 def extract_data():
     print("Titanic 데이터 추출 중...")
     try:
-        df = pd.read_csv('/actual/path/to/titanic.csv')
-        df.to_csv('/actual/path/to/extracted_data.csv', index=False)
+        df = sns.load_dataset('titanic')
+        df.to_csv('/tmp/extracted_data.csv', index=False)
         print(df.head())
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"Error: {e}")
-
 
 # 데이터 변환 함수 (결측치 처리 및 컬럼 제거)
 def transform_data():
-    print("Titanic 데이터 변환 중...")
+    print("Titanic 데이터 변환 중..")
     try:
-        df = pd.read_csv('/actual/path/to/extracted_data.csv')
+        df = pd.read_csv('/tmp/extracted_data.csv')
 
         # 결측치 처리: 나이('Age')와 선임자('Embarked')의 결측치를 채우기
-        df['Age'].fillna(df['Age'].mean(), inplace=True)
-        df['Embarked'].fillna(df['Embarked'].mode()[0], inplace=True)
+        df['age'].fillna(df['age'].mean(), inplace=True)
+        df['embarked'].fillna(df['embarked'].mode()[0], inplace=True)
 
-        # 필요 없는 컬럼 제거: 'Cabin', 'Ticket'
-        df = df.drop(columns=['Cabin', 'Ticket'])
+        # 필요 없는 컬럼 제거: 'cabin', 'ticket'
+        df = df.drop(columns=['cabin', 'ticket'])
 
-        df.to_csv('/actual/path/to/transformed_data.csv', index=False)
+        df.to_csv('/tmp/transformed_data.csv', index=False)
         print(df.head())
     except FileNotFoundError as e:
         print(f"Error: {e}")
-
 
 # 데이터 적재 함수
 def load_data():
     print("전처리된 Titanic 데이터 적재 중...")
     try:
-        df = pd.read_csv('/actual/path/to/transformed_data.csv')
-        df.to_csv('/actual/path/to/final_data.csv', index=False)
+        df = pd.read_csv('/tmp/transformed_data.csv')
+        df.to_csv('/tmp/final_data.csv', index=False)
         print(df.head())
     except FileNotFoundError as e:
         print(f"Error: {e}")
