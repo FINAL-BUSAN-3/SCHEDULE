@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 def extract_data():
     print("Titanic 데이터 추출 중...")
     try:
-        df = pd.read_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\titanic.csv')
-        df.to_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\extracted_data.csv', index=False)
+        df = pd.read_csv(r'C:\Users\kfq\Desktop\final\data\titanic.csv')
+        df.to_csv(r'C:\Users\kfq\Desktop\final\data\extracted_data.csv', index=False)
         print("Extracted Data Sample:")
         print(df.head())
     except Exception as e:
@@ -18,7 +18,7 @@ def extract_data():
 def transform_data():
     print("Titanic 데이터 변환 중...")
     try:
-        df = pd.read_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\extracted_data.csv')
+        df = pd.read_csv(r'C:\Users\kfq\Desktop\final\data\extracted_data.csv')
 
         # 결측치 처리
         df['age'].fillna(df['age'].mean(), inplace=True)
@@ -27,7 +27,7 @@ def transform_data():
         # 필요 없는 컬럼 제거
         df = df.drop(columns=['cabin', 'ticket'])
 
-        df.to_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\transformed_data.csv', index=False)
+        df.to_csv(r'C:\Users\kfq\Desktop\final\data\transformed_data.csv', index=False)
         print("Transformed Data 저장 완료:")
         print(df.head())
     except FileNotFoundError as e:
@@ -37,9 +37,9 @@ def transform_data():
 def load_data():
     print("전처리된 Titanic 데이터 적재 중...")
     try:
-        df = pd.read_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\transformed_data.csv')
+        df = pd.read_csv(r'C:\Users\kfq\Desktop\final\data\transformed_data.csv')
 
-        df.to_csv(r'C:\Users\kfq\Desktop\최종\데이터셋\final_data.csv', index=False)
+        df.to_csv(r'C:\Users\kfq\Desktop\final\data\final_data.csv', index=False)
         print("Final Data 저장 완료:")
         print(df.head())
     except FileNotFoundError as e:
