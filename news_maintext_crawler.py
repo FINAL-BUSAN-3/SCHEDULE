@@ -142,19 +142,112 @@ def date_range(start, end):
         yield current
         current -= delta
 
+if __name__ == "__main__":
 
-# 크롤링 실행 및 실시간 저장
-with open("naver_news_103_239.csv", "w", newline="", encoding="utf-8-sig") as output_file:
-    fieldnames = ["doc_id", "section", "crawl_dt", "media_com", "title", "contents", "url", "publish_date", "part_dt"]
-    writer = csv.DictWriter(output_file, fieldnames=fieldnames)
-    writer.writeheader()
 
-    counter = [0]  # 저장된 데이터 개수를 추적하기 위한 리스트
 
-    for single_date in date_range(start_date, end_date):  # 최근 날짜부터 크롤링
-        formatted_date = single_date.strftime("%Y%m%d")
-        for page in range(1, max_pages + 1):
-            section_url = base_url.format(formatted_date, page)
-            get_news_list(section_url, writer, counter)
+    # 1.
+    #   dictionary 선언
+    #   크롤링할 기간 설정 (logical_date)
+    #   max_pages = 5
+    #   f"https://news.naver.com/main/list.naver?mode=LS2D&mid=sec&sid1=103&sid2=239&date={formatted_date}&page={page}"
+    #   dictionary -> csv
+    # 2. hdfs put
+    # 3. csv delete
+    # 4. hive table repair
+    # 5. Trino iceberg
 
-print("크롤링 및 CSV 파일로 실시간 저장 완료.")
+
+
+    document_all = {}
+    document = {}
+    """
+    writer.writerow({
+        "doc_id": doc_id,
+        "section": "자동차/시승기",
+        "crawl_dt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "media_com": media_com,
+        "title": title,
+        "contents": article_data,
+        "url": link,
+        "publish_date": publish_date,
+        "part_dt": datetime.now().strftime("%Y-%m-%d")
+    })
+    """
+
+    document['section'] = "자동차/시승기",
+    document['crawl_dt'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+    document_all[generate_uuid()] = document
+
+    # 크롤링 실행 및 실시간 저장
+    with open("naver_news_103_239.csv", "w", newline="", encoding="utf-8") as output_file:
+        fieldnames = ["doc_id", "section", "crawl_dt", "media_com", "title", "contents", "url", "publish_date", "part_dt"]
+        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        counter = [0]  # 저장된 데이터 개수를 추적하기 위한 리스트
+
+        for single_date in date_range(start_date, end_date):  # 최근 날짜부터 크롤링
+            formatted_date = single_date.strftime("%Y%m%d")
+            for page in range(1, max_pages + 1):
+
+                section_url = base_url.format(formatted_date, page)
+                # get_news_list(section_url, writer, counter)
+
+                """
+                try:
+                    response = session.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                    response.raise_for_status()
+                except requests.RequestException as e:
+                    print(f"Error fetching URL {url}: {e}")
+                    return None
+            
+                soup = BeautifulSoup(response.text, "html.parser")
+            
+                # 기사 리스트 가져오기
+                articles = soup.select(".list_body .type06_headline li, .list_body .type06 li")
+            
+                # tqdm을 사용하여 게이지바 표시
+                for article in tqdm(articles, desc=f"크롤링 진행중 (자동차/시승기)", ncols=80):
+                    try:
+                        # 기사 제목 추출
+                        title_element = article.select_one("dt:not(.photo) a")  # 사진이 아닌 제목 링크 선택
+                        title = title_element.text.strip() if title_element else "제목을 가져올 수 없습니다."
+                        link = title_element["href"] if title_element else ""
+            
+                        # 언론사 정보 추출
+                        media_com = article.select_one(".writing").text.strip() if article.select_one(".writing") else "언론사 정보 없음"
+            
+                        # 기사 내용 크롤링
+                        article_data, publish_date = get_article_content(link)
+            
+                        # 영문 기사 제외 및 키워드 필터링
+                        if (not is_korean_text(title) or not is_korean_text(article_data)) or (
+                                not contains_keywords(title) and not contains_keywords(article_data)):
+                            continue
+            
+                        # 고유 UUID 생성
+                        doc_id = generate_uuid()
+            
+                        # 데이터 실시간으로 저장
+                        writer.writerow({
+                            "doc_id": doc_id,
+                            "section": "자동차/시승기",
+                            "crawl_dt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "media_com": media_com,
+                            "title": title,
+                            "contents": article_data,
+                            "url": link,
+                            "publish_date": publish_date,
+                            "part_dt": datetime.now().strftime("%Y-%m-%d")
+                        })
+            
+                        # 카운터 증가 및 출력
+                        counter[0] += 1
+                        print(f"현재 저장된 데이터 개수: {counter[0]}")
+                    except Exception as e:
+                        print(f"Error occurred: {e}")
+                """
+
+    print("크롤링 및 CSV 파일로 실시간 저장 완료.")
