@@ -34,7 +34,7 @@ with DAG(
         priority_weight=1,
         query=f"""
         SELECT COUNT(*) 
-        FROM OPERTAION_MYSQL.PRESS.PRESS_RAW_DATA
+        FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
         """,
         do_xcom_push=True,
     )
