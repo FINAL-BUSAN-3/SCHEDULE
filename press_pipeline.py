@@ -32,8 +32,7 @@ with DAG(
         task_id='press_extract',
         pool=DEFAULT_POOL,
         priority_weight=1,
-        timeout=None,
-        execute=f"""
+        query=f"""
         SELECT COUNT(*) 
         FROM OPERTAION_MYSQL.PRESS.PRESS_RAW_DATA
         """,
