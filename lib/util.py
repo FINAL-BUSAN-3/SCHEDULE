@@ -30,7 +30,7 @@ class TrinoOperator(BaseOperator):
 
 
 class SlackOperator(BaseOperator):
-    def __init__(self, chennal_name, message, **kwargs) -> None:
+    def __init__(self, channel_name, message, **kwargs) -> None:
         ssl._create_default_https_context = ssl._create_unverified_context
 
         conn = connect(
