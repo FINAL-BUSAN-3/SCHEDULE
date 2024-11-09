@@ -67,4 +67,4 @@ with DAG(
     )
 
     # 작업 순서 정의
-    press_count >> press_alert
+    press_count >> press_alert >> press_stg
