@@ -5,6 +5,9 @@ from datetime import datetime, timedelta
 from SCHEDULE.lib.util import TrinoOperator, SlackOperator, TrinoReturnOperator
 from textwrap import dedent
 
+src_table = "OPERATION_MYSQL.PRESS.PRESS_RAW_DATA"
+stg_table = "DW_HIVE.STG.STG_PRESS_RAW_DATA"
+ods_table = "DL_ICEBERG.ODS.DS_PRESS_RAW_DATA"
 
 # 기본 인자 설정
 default_args = {
@@ -36,7 +39,7 @@ with (DAG(
         priority_weight=1,
         query=f"""
         SELECT COUNT(*) 
-        FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
+        FROM {src_table}
         """,
         do_xcom_push=True,
     )
@@ -61,7 +64,7 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         query=f"""
-                DROP TABLE DW_HIVE.STG.PRESS_RAW_DATA
+                DROP TABLE {stg_table}
                 """,
         do_xcom_push=True,
     )
@@ -77,7 +80,7 @@ with (DAG(
         Staging 영역을 초기화 했습니다.
         Table Name : DW_HIVE.STG.STG_PRESS_RAW_DATA
         Time : {{ ts }}
-            """)
+        """)
     )
 
     # 5. press_stg 적재
@@ -86,9 +89,9 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         query=f"""
-            CREATE TABLE DW_HIVE.STG.STG_PRESS_RAW_DATA AS
+            CREATE TABLE {stg_table} AS
             SELECT * 
-            FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
+            FROM {src_table}
             """
     )
 
@@ -99,7 +102,7 @@ with (DAG(
         priority_weight=1,
         query=f"""
             SELECT COUNT(*) 
-            FROM DW_HIVE.STG.PRESS_RAW_DATA
+            FROM {stg_table}
             """,
         do_xcom_push=True,
     )
@@ -123,8 +126,8 @@ with (DAG(
         task_id='press_ods_drop_partition',
         pool=DEFAULT_POOL,
         priority_weight=1,
-        query="""
-        DELETE FROM DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        query=f"""
+        DELETE FROM {ods_table}
         WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
         """
     )
@@ -134,11 +137,11 @@ with (DAG(
         task_id='press_ods',
         pool=DEFAULT_POOL,
         priority_weight=1,
-        query="""
-        INSERT INTO DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        query=f"""
+        INSERT INTO {ods_table}
         SELECT *,
                DATE_FORMAT(NOW(), '%Y%m%d') PART_DT
-        FROM DW_HIVE.STG.STG_PRESS_RAW_DATA;
+        FROM {stg_table}
         """
     )
 
@@ -147,9 +150,9 @@ with (DAG(
         task_id='press_ods_count',
         pool=DEFAULT_POOL,
         priority_weight=1,
-        query="""
+        query=f"""
         SELECT COUNT(*) 
-        FROM DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        FROM {ods_table}
         WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
         """,
         do_xcom_push=True,
