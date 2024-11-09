@@ -75,7 +75,7 @@ class SlackOperator(BaseOperator):
         self.message = message
         self.slack_client = WebClient(token=self.SLACK_BOT_TOKEN)
 
-    def execute(self):
+    def execute(self, context):
         try:
 
             response = self.slack_client.conversations_list()

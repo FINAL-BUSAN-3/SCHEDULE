@@ -28,7 +28,7 @@ with DAG(
         catchup=False,
 ) as dag:
 
-    # 각 단계 정의
+    # 1. 각 단계 정의
     press_count = TrinoReturnOperator(
         task_id='press_count',
         pool=DEFAULT_POOL,
@@ -40,9 +40,9 @@ with DAG(
         do_xcom_push=True,
     )
 
-    # press_alert 전송
+    # 2. press_alert 전송
     press_alert = SlackOperator(
-        task_id='press_extract',
+        task_id='press_alert',
         pool=DEFAULT_POOL,
         priority_weight=1,
         channel_name='operation-alert',
@@ -51,6 +51,19 @@ with DAG(
         Press count : {{task_instance.xcom_pull(task_ids='press_count', key='return_value')}}
         Press Batch 를 시작 합니다.
         """
+    )
+
+    # 3. press_stg 적재
+    press_stg = TrinoOperator(
+        task_id='press_stg',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+            INSERT INTO DW
+            SELECT * 
+            FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
+            """,
+        do_xcom_push=True,
     )
 
     # 작업 순서 정의
