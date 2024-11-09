@@ -49,7 +49,7 @@ class SlackOperator(BaseOperator):
                 """).fetchall()[0][0]
 
         self.SLACK_BOT_TOKEN = token  # 받은 Bot User OAuth Access Token으로 바꾸기
-        self.channel_name = chennal_name # "operation-alert"
+        self.channel_name = channel_name # "operation-alert"
         self.message = message
         self.slack_client = WebClient(token=self.SLACK_BOT_TOKEN)
 
