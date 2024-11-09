@@ -30,7 +30,7 @@ with DAG(
 
     # 각 단계 정의
     press_count = TrinoOperator(
-        task_id='press_extract',
+        task_id='press_count',
         pool=DEFAULT_POOL,
         priority_weight=1,
         query=f"""
@@ -48,8 +48,9 @@ with DAG(
         channel_name='operation-alert',
         message="""
         [Press Batch]
+        Press count : {{task_instance.xcom_pull(task_ids='press_count', key='return_value')}}
         Press Batch 를 시작 합니다.
-        """,
+        """
     )
 
     # 작업 순서 정의
