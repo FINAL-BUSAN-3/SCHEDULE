@@ -35,7 +35,7 @@ DEFAULT_POOL = 'defect'
 
 # DAG 정의
 with (DAG(
-        'press_pipeline',
+        'defect_pipeline',
         default_args=default_args,
         description='press_pipeline',
         schedule_interval='0 2 * * *',  # 매일 실행
