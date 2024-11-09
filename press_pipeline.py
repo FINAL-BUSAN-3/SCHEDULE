@@ -34,6 +34,7 @@ with (DAG(
         task_id='press_count',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         query=f"""
         SELECT COUNT(*) 
         FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
@@ -46,6 +47,7 @@ with (DAG(
         task_id='press_batch_start_alert',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         channel_name='operation-alert',
         message=dedent("""
         [Press Batch]
@@ -60,8 +62,9 @@ with (DAG(
         task_id='press_stg_drop',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         query=f"""
-                DROP TABLE DW_HIVE.STG.PREE_RAW_DATA
+                DROP TABLE DW_HIVE.STG.PRESS_RAW_DATA
                 """,
         do_xcom_push=True,
     )
@@ -71,6 +74,7 @@ with (DAG(
         task_id='press_stg_drop_alarm',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         channel_name='operation-alert',
         message=dedent("""
         [Press Batch]
@@ -85,6 +89,7 @@ with (DAG(
         task_id='press_stg',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         query=f"""
             CREATE TABLE DW_HIVE.STG.PRESS_RAW_DATA AS
             SELECT * 
@@ -98,6 +103,7 @@ with (DAG(
         task_id='press_stg_count',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         query=f"""
             SELECT COUNT(*) 
             FROM DW_HIVE.STG.PRESS_RAW_DATA
@@ -110,6 +116,7 @@ with (DAG(
         task_id='press_stg_alarm',
         pool=DEFAULT_POOL,
         priority_weight=1,
+        provide_context=True,
         channel_name='operation-alert',
         message=dedent("""
         [Press Batch]
