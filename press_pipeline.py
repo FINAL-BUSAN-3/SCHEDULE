@@ -22,7 +22,7 @@ DEFAULT_POOL = 'press'
 with DAG(
         'press_pipeline',
         default_args=default_args,
-        description='A Titanic data preprocessing pipeline',
+        description='press_pipeline',
         schedule_interval='0 1 * * *',  # 매일 실행
         tags=['press'],
         catchup=False,
