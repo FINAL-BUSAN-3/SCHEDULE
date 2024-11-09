@@ -118,8 +118,6 @@ with (DAG(
                 """
     )
 
-
-
     # 작업 순서 정의
-    press_count >> press_batch_start_alert >> press_stg_drop >> press_stg_drop_alarm >> press_stg >>
-    press_stg_count >> press_stg_alarm
+    press_count >> press_batch_start_alert >> press_stg_drop >> press_stg_drop_alarm >> press_stg
+    press_stg >> press_stg_count >> press_stg_alarm
