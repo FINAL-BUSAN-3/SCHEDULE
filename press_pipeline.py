@@ -2,7 +2,7 @@ import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from SCHEDULE.lib.util import TrinoOperator
+from SCHEDULE.lib.util import TrinoOperator, SlackOperator
 
 
 # 기본 인자 설정
@@ -27,18 +27,30 @@ with DAG(
         tags=['press'],
         catchup=False,
 ) as dag:
+
     # 각 단계 정의
     press_count = TrinoOperator(
         task_id='press_extract',
         pool=DEFAULT_POOL,
         priority_weight=1,
-        timeout=None,
-        execute=f"""
+        query=f"""
         SELECT COUNT(*) 
-        FROM OPERTAION_MYSQL.PRESS.PRESS_RAW_DATA
+        FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
         """,
         do_xcom_push=True,
     )
 
+    # press_alert 전송
+    press_alert = SlackOperator(
+        task_id='press_extract',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message="""
+        [Press Batch]
+        Press Batch 를 시작 합니다.
+        """,
+    )
+
     # 작업 순서 정의
-    press_count
+    press_count >> press_alert
