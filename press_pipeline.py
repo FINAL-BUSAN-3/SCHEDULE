@@ -75,7 +75,7 @@ with (DAG(
         message=dedent("""
         [Press Batch]
         Staging 영역을 초기화 했습니다.
-        Table Name : DW_HIVE.STG.PRESS_RAW_DATA
+        Table Name : DW_HIVE.STG.STG_PRESS_RAW_DATA
         Time : {{ ts }}
             """)
     )
@@ -86,11 +86,10 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         query=f"""
-            CREATE TABLE DW_HIVE.STG.PRESS_RAW_DATA AS
+            CREATE TABLE DW_HIVE.STG.STG_PRESS_RAW_DATA AS
             SELECT * 
             FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
-            """,
-        do_xcom_push=True,
+            """
     )
 
     # 6. press stg 검증
@@ -119,6 +118,60 @@ with (DAG(
         """)
     )
 
+    # 8. press ods 파티션 삭제
+    press_ods_drop_partition = TrinoOperator(
+        task_id='press_ods_drop_partition',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query="""
+        DELETE FROM DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        """
+    )
+
+    # 9. press ods
+    press_ods = TrinoOperator(
+        task_id='press_ods',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query="""
+        INSERT INTO DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        SELECT *,
+               DATE_FORMAT(NOW(), '%Y%m%d') PART_DT
+        FROM DW_HIVE.STG.STG_PRESS_RAW_DATA;
+        """
+    )
+
+    # 10. press ods count
+    press_ods_count = TrinoReturnOperator(
+        task_id='press_ods_count',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query="""
+        SELECT COUNT(*) 
+        FROM DL_ICEBERG.ODS.DS_PRESS_RAW_DATA
+        WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        """,
+        do_xcom_push=True,
+    )
+
+    # 11 ods 적재 알람
+    press_ods_alarm = SlackOperator(
+        task_id='press_ods_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+            [Press Batch]
+            ODS 완료 했습니다.
+            count : {{ ti.xcom_pull(task_ids='press_ods_count', key='return_value') }}
+            Time : {{ ts }}
+            """)
+    )
+
+
+
     # 작업 순서 정의
     press_count >> press_batch_start_alert >> press_stg_drop >> press_stg_drop_alarm >> press_stg
-    press_stg >> press_stg_count >> press_stg_alarm
+    press_stg >> press_stg_count >> press_stg_alarm >> press_ods_drop_partition >> press_ods >> press_ods_count
+    press_ods_count >> press_ods_alarm
