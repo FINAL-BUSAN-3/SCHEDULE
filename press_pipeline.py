@@ -3,6 +3,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from SCHEDULE.lib.util import TrinoOperator, SlackOperator, TrinoReturnOperator
+from textwrap import dedent
 
 
 # 기본 인자 설정
@@ -46,12 +47,12 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         channel_name='operation-alert',
-        message="""
+        message=dedent("""
         [Press Batch]
-        Press count : {{task_instance.xcom_pull(task_ids='press_count', key='return_value')}}
+        Press count : {{ ti.xcom_pull(task_ids='press_count', key='return_value') }}
         Press Batch 를 시작 합니다.
-        Time : {{ts}}
-        """
+        Time : {{ ts }}
+        """)
     )
 
     # 3. press stg 초기화
@@ -71,12 +72,12 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         channel_name='operation-alert',
-        message="""
-            [Press Batch]
-            Staging 영역을 초기화 했습니다.
-            Table Name : DW_HIVE.STG.PREE_RAW_DATA
-            Time : {{ts}}
-            """
+        message=dedent("""
+        [Press Batch]
+        Staging 영역을 초기화 했습니다.
+        Table Name : DW_HIVE.STG.PRESS_RAW_DATA
+        Time : {{ ts }}
+            """)
     )
 
     # 5. press_stg 적재
@@ -85,7 +86,7 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         query=f"""
-            CREATE TABLE DW_HIVE.STG.PREE_RAW_DATA AS
+            CREATE TABLE DW_HIVE.STG.PRESS_RAW_DATA AS
             SELECT * 
             FROM OPERATION_MYSQL.PRESS.PRESS_RAW_DATA
             """,
@@ -99,7 +100,7 @@ with (DAG(
         priority_weight=1,
         query=f"""
             SELECT COUNT(*) 
-            FROM DW_HIVE.STG.PREE_RAW_DATA
+            FROM DW_HIVE.STG.PRESS_RAW_DATA
             """,
         do_xcom_push=True,
     )
@@ -110,12 +111,12 @@ with (DAG(
         pool=DEFAULT_POOL,
         priority_weight=1,
         channel_name='operation-alert',
-        message="""
-                [Press Batch]
-                Staging 완료 했습니다.
-                count : {{task_instance.xcom_pull(task_ids='press_stg_count', key='return_value')}}
-                Time : {{ts}}
-                """
+        message=dedent("""
+        [Press Batch]
+        Staging 완료 했습니다.
+        count : {{ ti.xcom_pull(task_ids='press_stg_count', key='return_value') }}
+        Time : {{ ts }}
+        """)
     )
 
     # 작업 순서 정의
