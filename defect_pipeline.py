@@ -24,7 +24,7 @@ default_args = {
 }
 
 def python_ssh(sh):
-    subprocess.check_output(sh, shell=True)
+    return subprocess.check_output(sh, shell=True)
 
 def defect_batch_handler(**context):
     python_ssh(f"""
