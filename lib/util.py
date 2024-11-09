@@ -28,6 +28,7 @@ class TrinoOperator(BaseOperator):
         cur = conn.cursor(self.query)
         cur.execute(self.query)
 
+
 class TrinoReturnOperator(BaseOperator):
     def __init__(self, query: str, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -50,8 +51,10 @@ class TrinoReturnOperator(BaseOperator):
         cur = conn.cursor(self.query)
         return cur.execute(self.query).fetchall()[0][0]
 
+
 class SlackOperator(BaseOperator):
     template_fields = ('message',)
+
     def __init__(self, channel_name, message, **kwargs) -> None:
         super().__init__(**kwargs)
         ssl._create_default_https_context = ssl._create_unverified_context
