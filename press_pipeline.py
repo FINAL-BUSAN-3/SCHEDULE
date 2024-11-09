@@ -2,7 +2,7 @@ import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from SCHEDULE.lib.util import TrinoOperator, SlackOperator
+from SCHEDULE.lib.util import TrinoOperator, SlackOperator, TrinoReturnOperator
 
 
 # 기본 인자 설정
@@ -29,7 +29,7 @@ with DAG(
 ) as dag:
 
     # 각 단계 정의
-    press_count = TrinoOperator(
+    press_count = TrinoReturnOperator(
         task_id='press_count',
         pool=DEFAULT_POOL,
         priority_weight=1,
