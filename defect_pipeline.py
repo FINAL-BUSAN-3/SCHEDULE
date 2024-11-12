@@ -28,7 +28,7 @@ def python_ssh(sh):
 
 def defect_batch_handler(**context):
     python_ssh(f"""
-    ssh -i /opt/airflow/busan.pem ubuntu@{wf_server} "python3 /home/ubuntu/test.py"
+    ssh -i /opt/airflow/busan.pem ubuntu@{wf_server} "python3 /home/ubuntu/social_defect_crawl.py"
     """)
 
 DEFAULT_POOL = 'defect'
