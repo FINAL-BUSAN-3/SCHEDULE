@@ -8,9 +8,9 @@ from textwrap import dedent
 
 wf_server = "ec2-100-24-7-128.compute-1.amazonaws.com"
 
-src_table = "OPERATION_MYSQL.PRESS.PRESS_RAW_DATA"
-stg_table = "DW_HIVE.STG.STG_PRESS_RAW_DATA"
-ods_table = "DL_ICEBERG.ODS.DS_PRESS_RAW_DATA"
+src_table = "OPERATION_MYSQL.SOCIAL.CAR_DEFECTS"
+stg_table = "DW_HIVE.STG.STG_CAR_DEFECTS"
+ods_table = "DL_ICEBERG.ODS.DS_CAR_DEFECTS"
 
 # 기본 인자 설정
 default_args = {
@@ -57,128 +57,177 @@ with (DAG(
         """)
     )
 
-    # 2. 수집 시작
-    defect_batch = PythonOperator(
-        task_id='defect_batch',
+    # 2. 수집 시작 알람
+    defect_batch_ingestion_alarm = SlackOperator(
+        task_id='defect_batch_ingestion_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+                [Social Defect Batch]
+                소셜 데이터(Defect) 수집을 시작 합니다.
+                Time : {{ ts }}
+                """)
+    )
+
+    # 3. 수집 시작
+    defect_ingestion = PythonOperator(
+        task_id='defect_ingestion',
         python_callable=defect_batch_handler,
         priority_weight=1,
         pool=DEFAULT_POOL
     )
-    # # 3. press stg 초기화
-    # press_stg_drop = TrinoOperator(
-    #     task_id='press_stg_drop',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #         DROP TABLE {stg_table}
-    #         """,
-    #     do_xcom_push=True,
-    # )
-    #
-    # # 4. press stg 초기화 알람 전송
-    # press_stg_drop_alarm = SlackOperator(
-    #     task_id='press_stg_drop_alarm',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     channel_name='operation-alert',
-    #     message=dedent("""
-    #     [Press Batch]
-    #     Staging 영역을 초기화 했습니다.
-    #     Table Name : DW_HIVE.STG.STG_PRESS_RAW_DATA
-    #     Time : {{ ts }}
-    #     """)
-    # )
-    #
-    # # 5. press_stg 적재
-    # press_stg = TrinoOperator(
-    #     task_id='press_stg',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #         CREATE TABLE {stg_table} AS
-    #         SELECT *
-    #         FROM {src_table}
-    #         """
-    # )
-    #
-    # # 6. press stg 검증
-    # press_stg_count = TrinoReturnOperator(
-    #     task_id='press_stg_count',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #         SELECT COUNT(*)
-    #         FROM {stg_table}
-    #         """,
-    #     do_xcom_push=True,
-    # )
-    #
-    # # 7. press stg 적재 완료 알람 전송
-    # press_stg_alarm = SlackOperator(
-    #     task_id='press_stg_alarm',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     channel_name='operation-alert',
-    #     message=dedent("""
-    #     [Press Batch]
-    #     Staging 완료 했습니다.
-    #     count : {{ ti.xcom_pull(task_ids='press_stg_count', key='return_value') }}
-    #     Time : {{ ts }}
-    #     """)
-    # )
-    #
-    # # 8. press ods 파티션 삭제
-    # press_ods_drop_partition = TrinoOperator(
-    #     task_id='press_ods_drop_partition',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #     DELETE FROM {ods_table}
-    #     WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
-    #     """
-    # )
-    #
-    # # 9. press ods
-    # press_ods = TrinoOperator(
-    #     task_id='press_ods',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #     INSERT INTO {ods_table}
-    #     SELECT *,
-    #            DATE_FORMAT(NOW(), '%Y%m%d') PART_DT
-    #     FROM {stg_table}
-    #     """
-    # )
-    #
-    # # 10. press ods count
-    # press_ods_count = TrinoReturnOperator(
-    #     task_id='press_ods_count',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     query=f"""
-    #     SELECT COUNT(*)
-    #     FROM {ods_table}
-    #     WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
-    #     """,
-    #     do_xcom_push=True,
-    # )
-    #
-    # # 11 ods 적재 알람
-    # press_ods_alarm = SlackOperator(
-    #     task_id='press_ods_alarm',
-    #     pool=DEFAULT_POOL,
-    #     priority_weight=1,
-    #     channel_name='operation-alert',
-    #     message=dedent("""
-    #         [Press Batch]
-    #         ODS 완료 했습니다.
-    #         count : {{ ti.xcom_pull(task_ids='press_ods_count', key='return_value') }}
-    #         Time : {{ ts }}
-    #         """)
-    # )
+
+    # 4. 수집 정보 확인
+    defect_source_count = TrinoReturnOperator(
+        task_id='defect_source_count',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+            SELECT COUNT(*)
+            FROM {src_table}
+            WHERE CRAWL_DT >= {datetime.now().strftime('%Y-%m-%d')}
+            """,
+        do_xcom_push=True,
+    )
+
+    # 5. 수집 완료 알람
+    defect_source_ingestion_done_alarm = SlackOperator(
+        task_id='defect_source_ingestion_done_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+        [Social Defect Batch]
+        소셜 데이터(Defect) 수집을 완료 했습니다.
+        Count : {{ ti.xcom_pull(task_ids='defect_source_count', key='return_value') }}
+        Time : {{ ts }}
+        """)
+    )
+
+    # 6. defect stg 초기화 알람 전송
+    defect_stg_drop_alarm = SlackOperator(
+        task_id='defect_stg_drop_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+        [Social Defect Batch]
+        Staging 영역을 초기화 했습니다.
+        Table Name : DW_HIVE.STG.STG_CAR_DEFECTS
+        Time : {{ ts }}
+        """)
+    )
+
+    # 6. defect stg 초기화 알람 전송
+    defect_stg_alarm = SlackOperator(
+        task_id='defect_stg_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+            [Social Defect Batch]
+            데이터를 Staging 합니다.
+            Table Name : DW_HIVE.STG.STG_CAR_DEFECTS
+            Time : {{ ts }}
+            """)
+    )
+
+    # 7. defect stg 적재
+    defect_stg = TrinoOperator(
+        task_id='defect_stg',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+            CREATE TABLE {stg_table} AS
+            SELECT *
+            FROM {src_table}
+            WHERE CRAWL_DT >= {datetime.now().strftime('%Y-%m-%d')}
+            """
+    )
+
+    # 8. defect stg 검증
+    defect_stg_count = TrinoReturnOperator(
+        task_id='defect_stg_count',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+            SELECT COUNT(*)
+            FROM {stg_table}
+            """,
+        do_xcom_push=True,
+    )
+
+    # 9. defect stg 적재 완료 알람 전송
+    defect_stg_alarm = SlackOperator(
+        task_id='press_stg_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+        [Social Defect Batch]
+        Staging 완료 했습니다.
+        count : {{ ti.xcom_pull(task_ids='defect_stg_count', key='return_value') }}
+        Time : {{ ts }}
+        """)
+    )
+
+    # 6. defect ods 알람 전송
+    defect_ods_alarm = SlackOperator(
+        task_id='defect_ods_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+                [Social Defect Batch]
+                데이터를 ODS 로 적재 합니다.
+                Table Name : DL_ICEBERG.ODS.DS_CAR_DEFECTS
+                Time : {{ ts }}
+                """)
+    )
+
+    # 9. defect ods
+    defect_ods = TrinoOperator(
+        task_id='defect_ods',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+        INSERT INTO {ods_table}
+        SELECT *,
+               DATE_FORMAT(NOW(), '%Y%m%d') PART_DT
+        FROM {stg_table}
+        """
+    )
+
+    # 10. defect ods count
+    defect_ods_count = TrinoReturnOperator(
+        task_id='defect_ods_count',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+        SELECT COUNT(*)
+        FROM {ods_table}
+        WHERE PART_DT = DATE_FORMAT(NOW(), '%Y%m%d')
+        """,
+        do_xcom_push=True,
+    )
+
+    # 11 ods 적재 알람
+    defect_ods_inspection_alarm = SlackOperator(
+        task_id='defect_ods_inspection_alarm',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        channel_name='operation-alert',
+        message=dedent("""
+            [Social Defect Batch]
+            ODS 완료 했습니다.
+            count : {{ ti.xcom_pull(task_ids='defect_ods_count', key='return_value') }}
+            Time : {{ ts }}
+            """)
+    )
 
 
-
-    # 작업 순서 정의
-    defect_batch_alarm >> defect_batch
+    defect_batch_alarm >> defect_batch_ingestion_alarm >> defect_ingestion >> defect_source_count
+    defect_source_count >> defect_source_ingestion_done_alarm >> defect_stg_drop_alarm >> defect_stg_alarm
+    defect_stg_alarm >> defect_stg >> defect_stg_count >> defect_stg_alarm >> defect_ods_alarm >> defect_ods
+    defect_ods >> defect_ods_count >> defect_ods_inspection_alarm
