@@ -40,7 +40,7 @@ with (DAG(
         'defect_pipeline',
         default_args=default_args,
         description='defect_pipeline',
-        schedule_interval='0 2 * * *',  # 매일 실행
+        schedule_interval='0 18 * * *',  # 매일 실행
         tags=['defect', 'social'],
         catchup=False,
 ) as dag):
