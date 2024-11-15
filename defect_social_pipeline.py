@@ -57,19 +57,6 @@ with (DAG(
         """)
     )
 
-    # 2. 수집 시작 알람
-    defect_batch_ingestion_alarm = SlackOperator(
-        task_id='defect_batch_ingestion_alarm',
-        pool=DEFAULT_POOL,
-        priority_weight=1,
-        channel_name='operation-alert',
-        message=dedent("""
-                [Social Defect Batch]
-                소셜 데이터(Defect) 수집을 시작 합니다.
-                Time : {{ ts }}
-                """)
-    )
-
     # 3. 수집 시작
     defect_ingestion = PythonOperator(
         task_id='defect_ingestion',
@@ -119,20 +106,6 @@ with (DAG(
         """)
     )
 
-    # 6. defect stg 초기화 알람 전송
-    defect_stg_alarm = SlackOperator(
-        task_id='defect_stg_alarm',
-        pool=DEFAULT_POOL,
-        priority_weight=1,
-        channel_name='operation-alert',
-        message=dedent("""
-            [Social Defect Batch]
-            데이터를 Staging 합니다.
-            Table Name : DW_HIVE.STG.STG_CAR_DEFECTS
-            Time : {{ ts }}
-            """)
-    )
-
     # 7. defect stg 적재
     defect_stg = TrinoOperator(
         task_id='defect_stg',
@@ -170,20 +143,6 @@ with (DAG(
         count : {{ ti.xcom_pull(task_ids='defect_stg_count', key='return_value') }}
         Time : {{ ts }}
         """)
-    )
-
-    # 6. defect ods 알람 전송
-    defect_ods_alarm = SlackOperator(
-        task_id='defect_ods_alarm',
-        pool=DEFAULT_POOL,
-        priority_weight=1,
-        channel_name='operation-alert',
-        message=dedent("""
-                [Social Defect Batch]
-                데이터를 ODS 로 적재 합니다.
-                Table Name : DL_ICEBERG.ODS.DS_CAR_DEFECTS
-                Time : {{ ts }}
-                """)
     )
 
     # 9. defect ods
@@ -227,7 +186,7 @@ with (DAG(
     )
 
 
-    defect_batch_alarm >> defect_batch_ingestion_alarm >> defect_ingestion >> defect_source_count
-    defect_source_count >> defect_source_ingestion_done_alarm >> defect_stg_drop_alarm >> defect_stg_alarm
-    defect_stg_alarm >> defect_stg >> defect_stg_count >> defect_stg_done_alarm >> defect_ods_alarm >> defect_ods
+    defect_batch_alarm >> defect_ingestion >> defect_source_count
+    defect_source_count >> defect_source_ingestion_done_alarm >> defect_stg_drop_alarm
+    defect_stg_drop_alarm >> defect_stg >> defect_stg_count >> defect_stg_done_alarm  >> defect_ods
     defect_ods >> defect_ods_count >> defect_ods_inspection_alarm
