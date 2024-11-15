@@ -35,9 +35,9 @@ DEFAULT_POOL = 'defect'
 
 # DAG 정의
 with (DAG(
-        'defect_pipeline',
+        'defect_social_pipeline',
         default_args=default_args,
-        description='defect_pipeline',
+        description='defect_social_pipeline',
         schedule_interval='0 18 * * *',  # 매일 실행
         tags=['defect', 'social'],
         catchup=False,
