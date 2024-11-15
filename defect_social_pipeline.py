@@ -73,7 +73,7 @@ with (DAG(
         query=f"""
             SELECT COUNT(*)
             FROM {src_table}
-            WHERE CRAWL_DT >= {datetime.now().strftime('%Y-%m-%d')}
+            WHERE CRAWL_DT >= '{datetime.now().strftime('%Y-%m-%d')}'
             """,
         do_xcom_push=True,
     )
