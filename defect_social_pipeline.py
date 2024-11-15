@@ -92,6 +92,15 @@ with (DAG(
         """)
     )
 
+    defect_stg_drop = TrinoOperator(
+        task_id='defect_stg_drop',
+        pool=DEFAULT_POOL,
+        priority_weight=1,
+        query=f"""
+            DROP TABLE {stg_table}
+            """
+    )
+
     # 6. defect stg 초기화 알람 전송
     defect_stg_drop_alarm = SlackOperator(
         task_id='defect_stg_drop_alarm',
@@ -187,6 +196,6 @@ with (DAG(
 
 
     defect_batch_alarm >> defect_ingestion >> defect_source_count
-    defect_source_count >> defect_source_ingestion_done_alarm >> defect_stg_drop_alarm
+    defect_source_count >> defect_source_ingestion_done_alarm >> defect_stg_drop >> defect_stg_drop_alarm
     defect_stg_drop_alarm >> defect_stg >> defect_stg_count >> defect_stg_done_alarm  >> defect_ods
     defect_ods >> defect_ods_count >> defect_ods_inspection_alarm
