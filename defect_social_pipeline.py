@@ -8,11 +8,9 @@ from textwrap import dedent
 
 wf_server = "ec2-100-24-7-128.compute-1.amazonaws.com"
 
-
 src_table = "OPERATION_MYSQL.SOCIAL.CAR_DEFECTS"
 stg_table = "DW_HIVE.STG.STG_CAR_DEFECTS"
 ods_table = "DL_ICEBERG.ODS.DS_CAR_DEFECTS"
-
 
 # 기본 인자 설정
 default_args = {
