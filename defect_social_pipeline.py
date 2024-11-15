@@ -124,7 +124,7 @@ with (DAG(
             CREATE TABLE {stg_table} AS
             SELECT *
             FROM {src_table}
-            WHERE CRAWL_DT >= {datetime.now().strftime('%Y-%m-%d')}
+            WHERE CRAWL_DT >= '{datetime.now().strftime('%Y-%m-%d')}'
             """
     )
 
